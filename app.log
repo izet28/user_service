@@ -1,0 +1,24 @@
+2024/12/31 20:23:42 logger.go:18: Logger initialized
+INFO: 2024/12/31 20:23:42 logger.go:24: Server is running on port 8080
+2024/12/31 20:26:06 logger.go:18: Logger initialized
+INFO: 2024/12/31 20:26:06 logger.go:24: Server is running on port 8080
+2024/12/31 20:32:10 logger.go:19: Logger initialized
+INFO: 2024/12/31 20:32:10 logger.go:25: Server is running on port 8080
+2024/12/31 20:37:17 logger.go:18: Logger initialized
+INFO: 2024/12/31 20:37:17 logger.go:27: Loading configuration...
+INFO: 2024/12/31 20:37:17 logger.go:27: Configuration loaded successfully
+INFO: 2024/12/31 20:37:17 logger.go:27: Connecting to database...
+INFO: 2024/12/31 20:37:17 logger.go:27: Database connection successful
+INFO: 2024/12/31 20:37:17 logger.go:27: Connecting to Redis...
+INFO: 2024/12/31 20:37:17 logger.go:27: Redis connection successful
+INFO: 2024/12/31 20:37:17 logger.go:27: Setting up routes...
+INFO: 2024/12/31 20:37:17 logger.go:27: Starting HTTP server on port 8080
+time="2024-12-31T20:39:10+07:00" level=info msg="Logger initialized"
+time="2024-12-31T20:39:10+07:00" level=info msg="Loading configuration..." type=INFO
+time="2024-12-31T20:39:10+07:00" level=info msg="Configuration loaded successfully" type=INFO
+time="2024-12-31T20:39:10+07:00" level=info msg="Connecting to database..." type=INFO
+time="2024-12-31T20:39:10+07:00" level=info msg="Database connection successful" type=INFO
+time="2024-12-31T20:39:10+07:00" level=info msg="Connecting to Redis..." type=INFO
+time="2024-12-31T20:39:10+07:00" level=info msg="Redis connection successful" type=INFO
+time="2024-12-31T20:39:10+07:00" level=info msg="Setting up routes..." type=INFO
+time="2024-12-31T20:39:10+07:00" level=info msg="Starting HTTP server on port 8080" type=INFO

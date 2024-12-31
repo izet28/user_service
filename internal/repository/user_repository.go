@@ -1,67 +1,62 @@
-// internal/repository/user_repository.go
 package repository
 
 import (
-	"github.com/izet28/user_service/internal/model"
-	"github.com/jinzhu/gorm"
-	_ "github.com/jinzhu/gorm/dialects/postgres" // PostgreSQL dialect
+	"database/sql"
+
+	"github.com/izet28/user_service/internal/models"
 )
 
-type UserRepository interface {
-	CreateUser(user *model.User) (*model.User, error)
-	GetUserByID(id int) (*model.User, error)
-	GetAllUsers() ([]model.User, error)
-	UpdateUser(user *model.User) (*model.User, error)
-	DeleteUser(id int) error
+type UserRepository struct {
+	DB *sql.DB
 }
 
-type UserRepositoryGORM struct {
-	DB *gorm.DB
+func NewUserRepository(db *sql.DB) *UserRepository {
+	return &UserRepository{DB: db}
 }
 
-// NewUserRepository creates a new instance of UserRepository using GORM.
-func NewUserRepository(db *gorm.DB) *UserRepositoryGORM {
-	return &UserRepositoryGORM{DB: db}
-}
-
-// CreateUser creates a new user in the database.
-func (r *UserRepositoryGORM) CreateUser(user *model.User) (*model.User, error) {
-	if err := r.DB.Create(user).Error; err != nil {
+func (repo *UserRepository) GetAllUsers() ([]models.User, error) {
+	rows, err := repo.DB.Query("SELECT id, username, email FROM users")
+	if err != nil {
 		return nil, err
 	}
-	return user, nil
-}
+	defer rows.Close()
 
-// GetUserByID retrieves a user by ID from the database.
-func (r *UserRepositoryGORM) GetUserByID(id int) (*model.User, error) {
-	var user model.User
-	if err := r.DB.First(&user, id).Error; err != nil {
-		return nil, err
+	var users []models.User
+	for rows.Next() {
+		var user models.User
+		if err := rows.Scan(&user.ID, &user.Username, &user.Email); err != nil {
+			return nil, err
+		}
+		users = append(users, user)
 	}
-	return &user, nil
-}
 
-// GetAllUsers retrieves all users from the database.
-func (r *UserRepositoryGORM) GetAllUsers() ([]model.User, error) {
-	var users []model.User
-	if err := r.DB.Find(&users).Error; err != nil {
-		return nil, err
-	}
 	return users, nil
 }
 
-// UpdateUser updates an existing user.
-func (r *UserRepositoryGORM) UpdateUser(user *model.User) (*model.User, error) {
-	if err := r.DB.Save(user).Error; err != nil {
+func (repo *UserRepository) CreateUser(user *models.User) (*models.User, error) {
+	err := repo.DB.QueryRow(
+		"INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id",
+		user.Username, user.Email, user.Password,
+	).Scan(&user.ID)
+	if err != nil {
 		return nil, err
 	}
 	return user, nil
 }
 
-// DeleteUser deletes a user by ID.
-func (r *UserRepositoryGORM) DeleteUser(id int) error {
-	if err := r.DB.Delete(&model.User{}, id).Error; err != nil {
-		return err
+func (repo *UserRepository) UpdateUser(id int, user *models.User) (*models.User, error) {
+	_, err := repo.DB.Exec(
+		"UPDATE users SET username = $1, email = $2, password = $3 WHERE id = $4",
+		user.Username, user.Email, user.Password, id,
+	)
+	if err != nil {
+		return nil, err
 	}
-	return nil
+	user.ID = id
+	return user, nil
+}
+
+func (repo *UserRepository) DeleteUser(id int) error {
+	_, err := repo.DB.Exec("DELETE FROM users WHERE id = $1", id)
+	return err
 }
