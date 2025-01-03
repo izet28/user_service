@@ -33,6 +33,15 @@ func (repo *UserRepository) GetAllUsers() ([]models.User, error) {
 	return users, nil
 }
 
+func (repo *UserRepository) GetUserByID(id int) (*models.User, error) {
+	var user models.User
+	err := repo.DB.QueryRow("SELECT id, username, email FROM users WHERE id = $1", id).Scan(&user.ID, &user.Username, &user.Email)
+	if err != nil {
+		return nil, err
+	}
+	return &user, nil
+}
+
 func (repo *UserRepository) CreateUser(user *models.User) (*models.User, error) {
 	err := repo.DB.QueryRow(
 		"INSERT INTO users (username, email, password) VALUES ($1, $2, $3) RETURNING id",

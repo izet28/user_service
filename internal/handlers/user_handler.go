@@ -3,6 +3,7 @@ package handlers
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -53,6 +54,41 @@ func (h *UserHandler) GetAllUsers(w http.ResponseWriter, r *http.Request) {
 	// Cache data
 	h.Cache.Set(cacheKey, users, 10*time.Minute)
 	utils.RespondWithJSON(w, http.StatusOK, users)
+}
+
+func (h *UserHandler) GetUser(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+	id, err := strconv.Atoi(params["id"])
+	if err != nil {
+		utils.RespondWithError(w, http.StatusBadRequest, "Invalid user ID")
+		return
+	}
+
+	// Check cache
+	userCacheKey := fmt.Sprintf("user:%d", id)
+	cachedData, err := h.Cache.Get(userCacheKey)
+	if err == nil {
+		var user models.User
+		if jsonErr := json.Unmarshal([]byte(cachedData), &user); jsonErr == nil {
+			logger.Info("Data retrieved from Redis for key: " + userCacheKey)
+			utils.RespondWithJSON(w, http.StatusOK, user)
+			return
+		}
+	}
+
+	// Fetch user from database
+	logger.Info("Cache miss. Fetching user from database for ID: " + strconv.Itoa(id))
+	user, err := h.Service.GetUserByID(id)
+	if err != nil {
+		logger.Error("Failed to retrieve user from database: " + err.Error())
+		utils.RespondWithError(w, http.StatusInternalServerError, "Failed to retrieve user")
+		return
+	}
+
+	// Cache the user data
+	h.Cache.Set(userCacheKey, user, 10*time.Minute)
+	logger.Info("User data cached in Redis for key: " + userCacheKey)
+	utils.RespondWithJSON(w, http.StatusOK, user)
 }
 
 // Create a new user
@@ -113,7 +149,12 @@ func (h *UserHandler) UpdateUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Info("User updated successfully: " + user.Username)
-	h.Cache.Delete("users") // Clear cache
+
+	// Clear cache for this specific user
+	userCacheKey := fmt.Sprintf("user:%d", id)
+	h.Cache.Delete(userCacheKey)
+	h.Cache.Delete("users") // Clear global cache
+
 	utils.RespondWithJSON(w, http.StatusOK, updatedUser)
 }
 
@@ -132,10 +173,16 @@ func (h *UserHandler) DeleteUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Info("User deleted successfully: ID " + strconv.Itoa(id))
-	h.Cache.Delete("users") // Clear cache
+
+	// Clear cache for this specific user
+	userCacheKey := fmt.Sprintf("user:%d", id)
+	h.Cache.Delete(userCacheKey)
+	h.Cache.Delete("users") // Clear global cache
+
 	utils.RespondWithJSON(w, http.StatusOK, map[string]string{"message": "User deleted successfully"})
 }
 
+// Setup routes
 func SetupRoutes(router *mux.Router, db *sql.DB, redisCache *cache.RedisCache) {
 	userRepo := repository.NewUserRepository(db)
 	userService := services.NewUserService(userRepo)
@@ -143,6 +190,7 @@ func SetupRoutes(router *mux.Router, db *sql.DB, redisCache *cache.RedisCache) {
 
 	api := router.PathPrefix("/api/v1").Subrouter()
 	api.HandleFunc("/users", userHandler.GetAllUsers).Methods("GET")
+	api.HandleFunc("/users/{id:[0-9]+}", userHandler.GetUser).Methods("GET")
 	api.HandleFunc("/users", userHandler.CreateUser).Methods("POST")
 	api.HandleFunc("/users/{id:[0-9]+}", userHandler.UpdateUser).Methods("PUT")
 	api.HandleFunc("/users/{id:[0-9]+}", userHandler.DeleteUser).Methods("DELETE")

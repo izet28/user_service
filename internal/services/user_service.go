@@ -18,6 +18,10 @@ func (svc *UserService) GetAllUsers() ([]models.User, error) {
 	return svc.Repo.GetAllUsers()
 }
 
+func (svc *UserService) GetUserByID(id int) (*models.User, error) {
+	return svc.Repo.GetUserByID(id)
+}
+
 func (svc *UserService) CreateUser(user *models.User) (*models.User, error) {
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
